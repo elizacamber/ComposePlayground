@@ -17,8 +17,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.elizacamber.composeplayground.ui.theme.ComposePlaygroundTheme
 import com.google.accompanist.coil.CoilImage
@@ -128,6 +132,24 @@ fun NameList(names: List<String>, modifier: Modifier, state: LazyListState) {
             Greeting(name = name)
             Divider(color = Color.Black)
         }
+    }
+}
+
+fun Modifier.firstBaselineToTop(
+    firstBaselineToTop: Dp
+) = Modifier.layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+
+    // Check the composable has a first baseline
+    check(placeable[FirstBaseline] != AlignmentLine.Unspecified)
+    val firstBaseline = placeable[FirstBaseline]
+
+    // Height of the composable with padding - first baseline
+    val placeableY = firstBaselineToTop.roundToPx() - firstBaseline
+    val height = placeable.height + placeableY
+    layout(placeable.width, height) {
+        // Where the composable gets placed
+        placeable.placeRelative(0, placeableY)
     }
 }
 //</editor-fold>
