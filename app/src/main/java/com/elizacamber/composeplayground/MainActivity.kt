@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -20,6 +21,10 @@ import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -29,7 +34,11 @@ import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
 
-const val switchToDummy = false
+const val DUMMY = 0
+const val STAGGERED = 1
+const val MORE_LESS_TEXT = 2
+
+const val selectedLayout = 2
 
 class MainActivity : ComponentActivity() {
 
@@ -37,7 +46,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MyApp {
-                if (switchToDummy) MyScreenContent() else StaggeredGridScreen()
+                when (selectedLayout) {
+                    0 -> MyScreenContent()
+                    1 -> StaggeredGridScreen()
+                    2 -> MoreLessTextScreen()
+                }
             }
         }
     }
@@ -50,6 +63,95 @@ fun MyApp(content: @Composable () -> Unit) {
             content()
         }
     }
+}
+
+@Composable
+fun MoreLessTextScreen() {
+    val texts = listOf(
+        "a dummy text that should show full in two lines",
+        "a dummy text that should not be too long to show entirely in juuust two lines",
+        "a dummy text that should be too long to show entirely in two lines and should show the expand buttons",
+        "a dummy text that should be too long to show entirely in two lines and should show the expand buttons",
+        "a dummy text that should be too long to show entirely in two lines and should show the expand buttons",
+        "a dummy text that should be too long to show entirely in two lines and should show the expand buttons"
+    )
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(300.dp)
+            .padding(horizontal = 8.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(32.dp),
+    ) {
+        items(items = texts) { text ->
+            MoreLessText(
+                text = text,
+                collapsedTag = "show more",
+                expandedTag = "show less",
+                maxLines = 2
+            )
+            Divider(color = Color.Black)
+        }
+    }
+}
+
+@Composable
+fun MoreLessText(text: String, collapsedTag: String, expandedTag: String, maxLines: Int) {
+    val collapsedTagSpace = "...      "
+    var collapsedText = text
+    val expandedText = StringBuilder().append(text).append("   ").append(expandedTag).toString()
+
+    var isExpanded by remember { mutableStateOf(false) }
+    var selectedText by remember { mutableStateOf(text) }
+    var allowToggle by remember { mutableStateOf(false) }
+    Column(
+        Modifier
+            .toggleable(value = isExpanded, onValueChange = {
+                if (allowToggle) {
+                    isExpanded = it
+                    selectedText = if (isExpanded) expandedText else collapsedText
+                }
+            })
+    ) {
+        Text(
+            text = selectedText,
+            onTextLayout = {
+                if (it.lineCount > maxLines) {
+                    allowToggle = true
+                    val lineEndIndex = it.getLineEnd(maxLines - 1)
+                    collapsedText =
+                        text.substring(
+                            0,
+                            lineEndIndex - collapsedTag.length - collapsedTagSpace.length
+                        ) + collapsedTagSpace + collapsedTag
+                    selectedText = if (isExpanded) expandedText else collapsedText
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun AnnotatedClickableText() {
+    Text(buildAnnotatedString {
+        append("Click ")
+
+        // We attach this *URL* annotation to the following content
+        // until `pop()` is called
+        pushStringAnnotation(
+            tag = "URL",
+            annotation = "https://developer.android.com"
+        )
+        withStyle(
+            style = SpanStyle(
+                color = Color.Blue,
+                fontWeight = FontWeight.Bold
+            )
+        ) {
+            append("here")
+        }
+
+        pop()
+    })
 }
 
 //<editor-fold desc="Dummy screen">
@@ -264,6 +366,10 @@ fun StaggeredGrid(
 @Composable
 fun DefaultPreview() {
     MyApp {
-        if (switchToDummy) MyScreenContent() else StaggeredGridScreen()
+        when (selectedLayout) {
+            0 -> MyScreenContent()
+            1 -> StaggeredGridScreen()
+            2 -> MoreLessTextScreen()
+        }
     }
 }
