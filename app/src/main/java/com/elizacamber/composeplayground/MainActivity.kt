@@ -14,6 +14,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +25,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -94,14 +96,44 @@ fun MoreLessTextScreen() {
     }
 }
 
+/**
+ * A text that will collapse if its length is extended further than a specified amount
+ * of lines. It will then ellipsize the text and show a string tag, indicating to the user
+ * that there's more text to be shown once tapped. When it's fully expanded a new tag will
+ * be added indicating that the text can be collapsed again.
+ * If the length of the size fits the number of maxLines, no tags are added.
+ *
+ * @param collapsedTag the tag showing when the text is collapsed. Default is "show more"
+ * @param expandedTag the tag showing when the text is already expanded. Default is "show less"
+ * @param maxLines the number of lines the text should fill. Default is 2
+ * @param collapsedTagSpace the space and/or characters between the text and the 'collapsedTag'. Default is ellipsis followed by 5 space characters
+ * @param expandedTagSpace the space and/or characters between the text and the 'expandedTag'. Default is 5 space characters
+ * @param spanStyle the style the 'collapsedTag' and the 'expandedTag' are using. Default is underline and bold.
+ */
 @Composable
-fun MoreLessText(text: String, collapsedTag: String, expandedTag: String, maxLines: Int) {
-    val collapsedTagSpace = "...      "
-    var collapsedText = text
-    val expandedText = StringBuilder().append(text).append("   ").append(expandedTag).toString()
+fun MoreLessText(
+    text: String,
+    collapsedTag: String = "show more",
+    expandedTag: String = "show less",
+    maxLines: Int = 2,
+    collapsedTagSpace: String = "...     ",
+    expandedTagSpace: String = "     ",
+    spanStyle: SpanStyle = SpanStyle(
+        textDecoration = TextDecoration.Underline,
+        fontWeight = FontWeight.Bold
+    )
+) {
+    var collapsedText = buildAnnotatedString { append(text) }
+    val expandedText = buildAnnotatedString {
+        append(text)
+        append(expandedTagSpace)
+        pushStyle(spanStyle)
+        append(expandedTag)
+        pop()
+    }
 
-    var isExpanded by remember { mutableStateOf(false) }
-    var selectedText by remember { mutableStateOf(text) }
+    var isExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedText by remember { mutableStateOf(buildAnnotatedString { append(text) }) }
     var allowToggle by remember { mutableStateOf(false) }
     Column(
         Modifier
@@ -119,10 +151,18 @@ fun MoreLessText(text: String, collapsedTag: String, expandedTag: String, maxLin
                     allowToggle = true
                     val lineEndIndex = it.getLineEnd(maxLines - 1)
                     collapsedText =
-                        text.substring(
-                            0,
-                            lineEndIndex - collapsedTag.length - collapsedTagSpace.length
-                        ) + collapsedTagSpace + collapsedTag
+                        buildAnnotatedString {
+                            append(
+                                text.substring(
+                                    0,
+                                    lineEndIndex - collapsedTag.length - collapsedTagSpace.length
+                                )
+                            )
+                            append(collapsedTagSpace)
+                            pushStyle(spanStyle)
+                            append(collapsedTag)
+                            pop()
+                        }
                     selectedText = if (isExpanded) expandedText else collapsedText
                 }
             }
@@ -149,7 +189,6 @@ fun AnnotatedClickableText() {
         ) {
             append("here")
         }
-
         pop()
     })
 }
